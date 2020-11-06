@@ -1,0 +1,233 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+#include <Wire.h>
+
+
+
+String apiKey = "QOG48EQUUBJ01KLW"; // Enter your Write API key from ThingSpeak
+const char* ssid = "Kasun 4G";
+const char* password = "Kasun19975@";
+const char* server = "api.thingspeak.com";
+WiFiClient client;
+
+
+
+
+
+int pin_Out_S0 = 8;
+int pin_In_Mux1 = A0;
+int Mux1_State[8] = {0};
+int Buzzer = D6;
+
+//sensor variable define
+
+int Co2 ;
+int smoke;
+
+
+
+
+void setup(){
+
+  pinMode(pin_Out_S0, OUTPUT);
+  pinMode(Buzzer, OUTPUT);
+  
+
+  Serial.begin(115200);
+   
+
+  
+
+ }
+
+    
+
+
+ void loop(){
+
+  //Function Call
+  //MQ09();
+  //delay(100);
+ // MQ02();
+
+  updateMux1();
+
+  for(int i = 0; i < 3;i++) {
+    
+    if (i==7){
+      Serial.println(Mux1_State[i]);
+      }
+      else {
+
+        Serial.print(Mux1_State[i]);
+        Serial.print(" ,  ");
+        
+        }
+    }
+  
+  }
+
+
+  void updateMux1(){
+
+     for (int i= 0; i<3; i++){
+      digitalWrite(pin_Out_S0, HIGH && (i & B00000001));
+     
+      Mux1_State[i] = analogRead(pin_In_Mux1);
+            
+      }
+    
+    }
+
+
+    void MQ02 (){
+      
+     delay(100);
+     digitalWrite(8,HIGH);
+     Co2 = analogRead(A0);
+     Serial.print(Co2);
+
+     if (Co2 > 100){
+        Serial.println ("WARNING!!");
+        digitalWrite (Buzzer, HIGH) ; //send tone
+        delay(1000);
+        digitalWrite (Buzzer, LOW) ;  //no tone
+  }
+  else {
+    Serial.println("NO GAS");
+
+      }
+    }
+
+    
+      void MQ09 (){
+      delay(100);
+      digitalWrite(8,LOW);
+      smoke = analogRead(A0);
+      Serial.print(smoke);
+
+       if (smoke > 100){
+        Serial.println ("FIRE!");
+        digitalWrite (Buzzer, HIGH) ; //send tone
+        delay(1000);
+        digitalWrite (Buzzer, LOW) ;  //no tone
+  }
+        else {
+          Serial.println("NO FIRE");
+  }
+
+void setup() { 
+ Serial.begin(9600); 
+	} 
+	void loop() { 
+ 		float sensor_volt;  
+ 		float RS_air; //  Rs in clean air 
+ 		float R0;  // R0 in 1000 ppm LPG 
+ 		float sensorValue; 
+	//Average   
+ 		for(int x = 0 ; x < 100 ; x++) 
+ 	{ 
+   		sensorValue = sensorValue + analogRead(A0); 
+ 	} 
+ 		sensorValue = sensorValue/100.0; 
+//-----------------------------------------------/ 
+ 	sensor_volt = (sensorValue/1024)*5.0; 
+ 		RS_air = (5.0-sensor_volt)/sensor_volt; // Depend on RL on yor module 
+ 		R0 = RS_air/9.9; // According to MQ9 datasheet table 
+	Serial.print("sensor_volt = "); 
+ 	Serial.print(sensor_volt); 
+	Serial.println("V");
+ 	Serial.print("R0 = "); 
+ 	Serial.println(R0); 
+ 	delay(1000); 
+	}
+
+const int AOUTpin=0;//the AOUT pin of the hydrogen sensor goes into analog pin A0 of the arduino
+const int DOUTpin=8;//the DOUT pin of the hydrogen sensor goes into digital pin D8 of the arduino
+const int ledPin=13;//the anode of the LED connects to digital pin D13 of the arduino
+
+int limit;
+int value;
+
+void setup() {
+Serial.begin(115200);//sets the baud rate
+pinMode(DOUTpin, INPUT);//sets the pin as an input to the arduino
+pinMode(ledPin, OUTPUT);//sets the pin as an output of the arduino
+}
+
+void loop()
+{
+value= analogRead(AOUTpin);//reads the analaog value from the hydrogen sensor's AOUT pin
+limit= digitalRead(DOUTpin);//reads the digital value from the hydrogen sensor's DOUT pin
+Serial.print("Hydrogen value: ");
+Serial.println(value);//prints the hydrogen value
+Serial.print("Limit: ");
+Serial.print(limit);//prints the limit reached as either LOW or HIGH (above or underneath)
+delay(100);
+if (limit == HIGH){
+digitalWrite(ledPin, HIGH);//if limit has been reached, LED turns on as status indicator
+}
+else{
+digitalWrite(ledPin, LOW);//if threshold not reached, LED remains off
+}
+}
+
+
+const int AOUTpin=A0;//the AOUT pin of the alcohol sensor goes into analog pin A0 of the arduino
+const int ledPin=13;//the anode of the LED connects to digital pin D13 of the arduino
+
+int i,alco_high,alco_low,mapped,data[200];
+
+void setup() {
+Serial.begin(115200);//sets the baud rate
+pinMode(AOUTpin, INPUT);//sets the pin as an input to the arduino
+for(i=2;i<=5;i++)
+{
+  pinMode(i,OUTPUT);//sets the pin as an output of the arduino
+}
+}
+
+void loop()
+{
+  alco_high=0; // initially alcohol level is zero
+  alco_low = 1023; // low threshold is 1023
+
+        for(i=200; i>0; i--){
+        data[i] = data[i-1]; // decrement of data
+        
+      if(data[i]>alco_high)
+      alco_high=data[i];
+      if(data[i]<alco_low)
+      alco_low=data[i];
+      }
+data[0]= analogRead(AOUTpin);//reads the analaog value from the alcohol sensor's AOUT pin
+mapped=map(data[0],0,1023,0,600);
+Serial.print("Alcohol value: ");
+Serial.println(mapped);//prints the alcohol value
+delay(100);
+
+ if((alco_high-alco_low)>150){
+  if(data[0] > (alco_high-.95*(alco_high-alco_low)))//this is true if the read is greater than 95% of the span
+  digitalWrite(2, HIGH);
+  else
+  digitalWrite(2,LOW); 
+  
+  if(data[0] > (alco_high-.9*(alco_high-alco_low)))
+  digitalWrite(3, HIGH);
+  else
+  digitalWrite(3,LOW); 
+ 
+    if(data[0] > (alco_high-.8*(alco_high-alco_low)))
+  digitalWrite(4, HIGH);
+  else
+  digitalWrite(4,LOW); 
+    if(data[0] > (alco_high-.7*(alco_high-alco_low)))
+      
+      
+      
+      }
+      
+  
+    //function call
